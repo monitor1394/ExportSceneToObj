@@ -6,7 +6,7 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// 导处场景到.obj文件（包括物件和地形）
+/// 导处场景到.obj文件（包括物件和地形），支持局部地形到处和自动裁剪
 /// 
 /// author by monitor1394@gmail.com
 /// 
