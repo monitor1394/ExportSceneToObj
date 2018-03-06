@@ -6,7 +6,7 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// 到处场景（包括物件和地形）
+/// 导处场景到.obj文件（包括物件和地形）
 /// 
 /// author by monitor1394@gmail.com
 /// 
