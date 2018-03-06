@@ -5,6 +5,12 @@ using System.Text;
 using UnityEditor;
 using UnityEngine;
 
+/// <summary>
+/// 到处场景（包括物件和地形）
+/// 
+/// author by monitor1394@gmail.com
+/// 
+/// </summary>
 public class ExportScene : ScriptableObject
 {
     private static float boundMinX = 1000;
