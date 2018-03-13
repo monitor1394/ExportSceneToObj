@@ -6,7 +6,7 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// 导处场景到.obj文件（包括物件和地形），支持局部地形到处和自动裁剪
+/// 导处场景（包括GameObject和Terrian）到.obj文件，支持自定义裁剪区域导出和自动裁剪导出
 /// 
 /// author by monitor1394@gmail.com
 /// 
@@ -87,6 +87,14 @@ public class ExportScene : ScriptableObject
         }
     }
 
+    private static void UpdateAutoCutRect(Vector3 v)
+    {
+        if (v.x < autoCutMinX) autoCutMinX = v.x;
+        if (v.x > autoCutMaxX) autoCutMaxX = v.x;
+        if (v.z < autoCutMinY) autoCutMinY = v.z;
+        if (v.z > autoCutMaxY) autoCutMaxY = v.z;
+    }
+
     private static bool IsInCutRect(GameObject obj)
     {
         if (cutMinX == 0 && cutMaxX == 0 && cutMinY == 0 && cutMaxY == 0) return true;
@@ -125,14 +133,6 @@ public class ExportScene : ScriptableObject
             }
         }
         return mesh.vertices.Length;
-    }
-
-    private static void UpdateAutoCutRect(Vector3 v)
-    {
-        if (v.x < autoCutMinX) autoCutMinX = v.x;
-        if (v.x > autoCutMaxX) autoCutMaxX = v.x;
-        if (v.z < autoCutMinY) autoCutMinY = v.z;
-        if (v.z > autoCutMaxY) autoCutMaxY = v.z;
     }
 
     private static int ExportTerrianToObj(TerrainData terrain, Vector3 terrainPos, 
