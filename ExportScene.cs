@@ -13,10 +13,18 @@ using UnityEngine;
 /// </summary>
 public class ExportScene : ScriptableObject
 {
-    private static float boundMinX = 1000;
-    private static float boundMaxX = 0;
-    private static float boundMinY = 1000;
-    private static float boundMaxY = 0;
+    private const string CUT_LB_OBJ_PATH = "export/bound_lb";
+    private const string CUT_RT_OBJ_PATH = "export/bound_rt";
+
+    private static float autoCutMinX = 1000;
+    private static float autoCutMaxX = 0;
+    private static float autoCutMinY = 1000;
+    private static float autoCutMaxY = 0;
+
+    private static float cutMinX = 0;
+    private static float cutMaxX = 0;
+    private static float cutMinY = 0;
+    private static float cutMaxY = 0;
 
     [MenuItem("ExportScene/ExportSceneToObj")]
     public static void Export()
@@ -36,7 +44,7 @@ public class ExportScene : ScriptableObject
         StringBuilder sb = new StringBuilder();
         Terrain terrain = UnityEngine.Object.FindObjectOfType<Terrain>();
         GameObject[] objs = UnityEngine.Object.FindObjectsOfType<GameObject>();
-
+        UpdateCutRect(autoCut);
         foreach (GameObject obj in objs)
         {
             if (obj.transform.parent == null) // root obj
@@ -48,7 +56,10 @@ public class ExportScene : ScriptableObject
                 }
                 foreach (var mf in mfs)
                 {
-                    vertexOffset += ExportMeshToObj(sb, mf, vertexOffset);
+                    if (IsInCutRect(mf.gameObject))
+                    {
+                        vertexOffset += ExportMeshToObj(sb, mf, vertexOffset);
+                    }
                 }
             }
         }
@@ -59,7 +70,29 @@ public class ExportScene : ScriptableObject
                 sb, vertexOffset, autoCut);
         }
         SaveObjToFile(sb.ToString(), 
-            Application.dataPath + (autoCut?"/scene(autoCut).obj": "/scene.obj"));
+            Application.dataPath +"/obj/"+ (autoCut?"/scene(autoCut).obj": "/scene.obj"));
+    }
+
+    private static void UpdateCutRect(bool autoCut)
+    {
+        cutMinX = cutMaxX = cutMinY = cutMaxY = 0;
+        if (!autoCut)
+        {
+            Vector3 lbPos = GetObjPos(CUT_LB_OBJ_PATH);
+            Vector3 rtPos = GetObjPos(CUT_RT_OBJ_PATH);
+            cutMinX = lbPos.x;
+            cutMaxX = rtPos.x;
+            cutMinY = lbPos.z;
+            cutMaxY = rtPos.z;
+        }
+    }
+
+    private static bool IsInCutRect(GameObject obj)
+    {
+        if (cutMinX == 0 && cutMaxX == 0 && cutMinY == 0 && cutMaxY == 0) return true;
+        Vector3 pos = obj.transform.position;
+        if (pos.x >= cutMinX && pos.x <= cutMaxX && pos.z >= cutMinY && pos.z <= cutMaxY) return true;
+        else return false;
     }
 
     private static void SaveObjToFile(string objInfo, string path)
@@ -77,10 +110,15 @@ public class ExportScene : ScriptableObject
         foreach (Vector3 vertice in mesh.vertices)
         {
             Vector3 v = mf.transform.TransformPoint(vertice);
-            if (v.x < boundMinX) boundMinX = v.x;
-            if (v.x > boundMaxX) boundMaxX = v.x;
-            if (v.z < boundMinY) boundMinY = v.z;
-            if (v.z > boundMaxY) boundMaxY = v.z;
+            if (v.x < autoCutMinX) autoCutMinX = v.x;
+            if (v.x > autoCutMaxX) autoCutMaxX = v.x;
+            if (v.z < autoCutMinY) autoCutMinY = v.z;
+            if (v.z > autoCutMaxY) autoCutMaxY = v.z;
+
+            //if (v.x < cutMinX) v.x = cutMinX;
+            //if (v.x > cutMaxX) v.x = cutMaxX;
+            //if (v.z < cutMinY) v.z = cutMinY;
+            //if (v.z > cutMaxY) v.z = cutMaxY;
             sb.AppendFormat("v {0:f1} {1:f1} {2:f1}\n", -v.x, v.y, v.z);
         }
         for (int i = 0; i < mesh.subMeshCount; i++)
@@ -109,13 +147,13 @@ public class ExportScene : ScriptableObject
         Vector2 terrainBoundLB, terrainBoundRT;
         if (autoCut)
         {
-            terrainBoundLB = GetTerrainBoundPos(new Vector3(boundMinX, 0, boundMinY), terrain, terrainPos);
-            terrainBoundRT = GetTerrainBoundPos(new Vector3(boundMaxX, 0, boundMaxY), terrain, terrainPos);
+            terrainBoundLB = GetTerrainBoundPos(new Vector3(autoCutMinX, 0, autoCutMinY), terrain, terrainPos);
+            terrainBoundRT = GetTerrainBoundPos(new Vector3(autoCutMaxX, 0, autoCutMaxY), terrain, terrainPos);
         }
         else
         {
-            terrainBoundLB = GetTerrainBoundPos("export/bound_lb", terrain, terrainPos);
-            terrainBoundRT = GetTerrainBoundPos("export/bound_rt", terrain, terrainPos);
+            terrainBoundLB = GetTerrainBoundPos(CUT_LB_OBJ_PATH, terrain, terrainPos);
+            terrainBoundRT = GetTerrainBoundPos(CUT_RT_OBJ_PATH, terrain, terrainPos);
         }
 
         int bw = (int)(terrainBoundRT.x - terrainBoundLB.x);
@@ -187,5 +225,15 @@ public class ExportScene : ScriptableObject
         Vector3 tpos = worldPos - terrainPos;
         return new Vector2((int)(tpos.x / terrain.size.x * terrain.heightmapWidth),
             (int)(tpos.z / terrain.size.z * terrain.heightmapHeight));
+    }
+
+    private static Vector3 GetObjPos(string path)
+    {
+        var go = GameObject.Find(path);
+        if (go)
+        {
+            return go.transform.position;
+        }
+        return Vector3.zero;
     }
 }
