@@ -110,15 +110,7 @@ public class ExportScene : ScriptableObject
         foreach (Vector3 vertice in mesh.vertices)
         {
             Vector3 v = mf.transform.TransformPoint(vertice);
-            if (v.x < autoCutMinX) autoCutMinX = v.x;
-            if (v.x > autoCutMaxX) autoCutMaxX = v.x;
-            if (v.z < autoCutMinY) autoCutMinY = v.z;
-            if (v.z > autoCutMaxY) autoCutMaxY = v.z;
-
-            //if (v.x < cutMinX) v.x = cutMinX;
-            //if (v.x > cutMaxX) v.x = cutMaxX;
-            //if (v.z < cutMinY) v.z = cutMinY;
-            //if (v.z > cutMaxY) v.z = cutMaxY;
+            UpdateAutoCutRect(v);
             sb.AppendFormat("v {0:f1} {1:f1} {2:f1}\n", -v.x, v.y, v.z);
         }
         for (int i = 0; i < mesh.subMeshCount; i++)
@@ -133,6 +125,14 @@ public class ExportScene : ScriptableObject
             }
         }
         return mesh.vertices.Length;
+    }
+
+    private static void UpdateAutoCutRect(Vector3 v)
+    {
+        if (v.x < autoCutMinX) autoCutMinX = v.x;
+        if (v.x > autoCutMaxX) autoCutMaxX = v.x;
+        if (v.z < autoCutMinY) autoCutMinY = v.z;
+        if (v.z > autoCutMaxY) autoCutMaxY = v.z;
     }
 
     private static int ExportTerrianToObj(TerrainData terrain, Vector3 terrainPos, 
