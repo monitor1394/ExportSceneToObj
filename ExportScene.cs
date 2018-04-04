@@ -66,11 +66,10 @@ public class ExportScene : ScriptableObject
         if (terrain)
         {
             vertexOffset += ExportTerrianToObj(terrain.terrainData, 
-                terrain.GetPosition(), 
-                sb, vertexOffset, autoCut);
+                terrain.GetPosition(), sb, vertexOffset, autoCut);
         }
         SaveObjToFile(sb.ToString(), 
-            Application.dataPath +"/obj/"+ (autoCut?"/scene(autoCut).obj": "/scene.obj"));
+            Application.dataPath +"/obj/"+ (autoCut?"scene(autoCut).obj": "scene.obj"));
     }
 
     private static void UpdateCutRect(bool autoCut)
@@ -99,8 +98,10 @@ public class ExportScene : ScriptableObject
     {
         if (cutMinX == 0 && cutMaxX == 0 && cutMinY == 0 && cutMaxY == 0) return true;
         Vector3 pos = obj.transform.position;
-        if (pos.x >= cutMinX && pos.x <= cutMaxX && pos.z >= cutMinY && pos.z <= cutMaxY) return true;
-        else return false;
+        if (pos.x >= cutMinX && pos.x <= cutMaxX && pos.z >= cutMinY && pos.z <= cutMaxY)
+            return true;
+        else
+            return false;
     }
 
     private static void SaveObjToFile(string objInfo, string path)
@@ -115,14 +116,28 @@ public class ExportScene : ScriptableObject
     private static int ExportMeshToObj(StringBuilder sb, MeshFilter mf, int vertexOffset)
     {
         Mesh mesh = mf.sharedMesh;
+        Quaternion r = mf.transform.localRotation;
+        Material[] mats = mf.GetComponent<Renderer>().sharedMaterials;
+
         foreach (Vector3 vertice in mesh.vertices)
         {
             Vector3 v = mf.transform.TransformPoint(vertice);
             UpdateAutoCutRect(v);
-            sb.AppendFormat("v {0:f1} {1:f1} {2:f1}\n", -v.x, v.y, v.z);
+            sb.AppendFormat("v {0:f2} {1:f2} {2:f2}\n", -v.x, v.y, v.z);
+        }
+        foreach(Vector3 nn in mesh.normals)
+        {
+            Vector3 v = r * nn;
+            sb.AppendFormat("vn {0:f2} {1:f2} {2:f2}\n", -v.x, -v.y, v.z);
+        }
+        foreach(Vector3 v in mesh.uv)
+        {
+            sb.AppendFormat("vt {0:f2} {1:f2}\n", v.x, v.y);
         }
         for (int i = 0; i < mesh.subMeshCount; i++)
         {
+            sb.AppendFormat("usemtl {0}\n", mats[i].name);
+            sb.AppendFormat("usemap {0}\n", mats[i].name);
             int[] triangles = mesh.GetTriangles(i);
             for (int j = 0; j < triangles.Length; j += 3)
             {
@@ -143,6 +158,7 @@ public class ExportScene : ScriptableObject
 
         Vector3 meshScale = terrain.size;
         meshScale = new Vector3(meshScale.x / (tw - 1), meshScale.y, meshScale.z / (th - 1));
+        Vector2 uvScale = new Vector2(1.0f / (tw - 1), 1.0f / (th - 1));
 
         Vector2 terrainBoundLB, terrainBoundRT;
         if (autoCut)
@@ -172,6 +188,8 @@ public class ExportScene : ScriptableObject
 
         float[,] tData = terrain.GetHeights(0, 0, tw, th);
         Vector3[] tVertices = new Vector3[w * h];
+        Vector2[] tUV = new Vector2[w * h];
+
         int[] tPolys = new int[(w - 1) * (h - 1) * 6];
 
         for (int y = 0; y < h; y++)
@@ -180,6 +198,7 @@ public class ExportScene : ScriptableObject
             {
                 Vector3 pos = new Vector3(-(startY + y), tData[startX + x, startY + y], (startX + x));
                 tVertices[y * w + x] = Vector3.Scale(meshScale, pos) + terrainPos;
+                tUV[y * w + x] = Vector2.Scale(new Vector2(x, y), uvScale);
             }
         }
         int index = 0;
@@ -197,7 +216,11 @@ public class ExportScene : ScriptableObject
         }
         for (int i = 0; i < tVertices.Length; i++)
         {
-            sb.AppendFormat("v {0:f1} {1:f1} {2:f1}\n", tVertices[i].x, tVertices[i].y, tVertices[i].z);
+            sb.AppendFormat("v {0:f2} {1:f2} {2:f2}\n", tVertices[i].x, tVertices[i].y, tVertices[i].z);
+        }
+        for(int i = 0; i < tUV.Length; i++)
+        {
+            sb.AppendFormat("vt {0:f2} {1:f2}\n", tUV[i].x, tUV[i].y);
         }
         for (int i = 0; i < tPolys.Length; i += 3)
         {
