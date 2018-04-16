@@ -25,6 +25,7 @@ public class ExportScene : ScriptableObject
     private static float cutMaxX = 0;
     private static float cutMinY = 0;
     private static float cutMaxY = 0;
+    private static int WRITE_THRESHOLD = 1024 * 1024;
 
     [MenuItem("ExportScene/ExportSceneToObj")]
     public static void Export()
@@ -40,6 +41,10 @@ public class ExportScene : ScriptableObject
 
     public static void ExportSceneToObj(bool autoCut)
     {
+        double t1 = getTickCount();
+        string dir = Application.dataPath + "/../obj/";
+        string path = dir + (autoCut ? "scene(autoCut).obj" : "scene.obj");
+        StreamWriter writer = GetMyStreamWriter( dir,  path, autoCut);
         int vertexOffset = 0;
         StringBuilder sb = new StringBuilder();
         Terrain terrain = UnityEngine.Object.FindObjectOfType<Terrain>();
@@ -56,22 +61,53 @@ public class ExportScene : ScriptableObject
                 }
                 foreach (var mf in mfs)
                 {
+                    if (mf.GetComponent<Renderer>() == null)
+                    {
+                        continue;
+                    }
                     if (IsInCutRect(mf.gameObject))
                     {
                         vertexOffset += ExportMeshToObj(sb, mf, vertexOffset);
                     }
                 }
             }
+            tryWrite(ref sb, ref writer, WRITE_THRESHOLD);
         }
+        tryWrite(ref sb, ref writer, 1);
         if (terrain)
         {
             vertexOffset += ExportTerrianToObj(terrain.terrainData, 
-                terrain.GetPosition(), sb, vertexOffset, autoCut);
+                terrain.GetPosition(), ref writer, vertexOffset, autoCut);
         }
-        SaveObjToFile(sb.ToString(), 
-            Application.dataPath +"/obj/"+ (autoCut?"scene(autoCut).obj": "scene.obj"));
+        writer.Close();
+        double t2 = getTickCount();
+        Debug.Log("ExportSceneToObj SUCCESS:" + path);
+        Debug.Log("ExportSceneToObj Cost Time:"+ ((float)(t2-t1) / 1000).ToString() + "s");
+    }
+    
+    private static StreamWriter GetMyStreamWriter(string dir, string path, bool autoCut)
+    {
+        if (!Directory.Exists(dir))
+        {
+            Directory.CreateDirectory(dir);
+        }
+        return new StreamWriter(path);
     }
 
+    private static void tryWrite(ref StringBuilder sb, ref StreamWriter writer, int threshold)
+    {
+        if (sb.Length >= threshold)
+        {
+            writer.Write(sb.ToString());
+            sb = new StringBuilder();
+        }
+    }
+
+    private static double getTickCount()
+    {
+        return (System.DateTime.Now.ToUniversalTime().Ticks - 621355968000000000) / 10000;
+    }
+    
     private static void UpdateCutRect(bool autoCut)
     {
         cutMinX = cutMaxX = cutMinY = cutMaxY = 0;
@@ -151,7 +187,7 @@ public class ExportScene : ScriptableObject
     }
 
     private static int ExportTerrianToObj(TerrainData terrain, Vector3 terrainPos, 
-        StringBuilder sb, int vertexOffset, bool autoCut)
+        ref StreamWriter writer, int vertexOffset, bool autoCut)
     {
         int tw = terrain.heightmapWidth;
         int th = terrain.heightmapHeight;
@@ -214,13 +250,17 @@ public class ExportScene : ScriptableObject
                 tPolys[index++] = (y * w) + x + 1;
             }
         }
+        
+        StringBuilder sb = new StringBuilder();
         for (int i = 0; i < tVertices.Length; i++)
         {
             sb.AppendFormat("v {0:f2} {1:f2} {2:f2}\n", tVertices[i].x, tVertices[i].y, tVertices[i].z);
+            tryWrite(ref sb, ref writer, WRITE_THRESHOLD);
         }
         for(int i = 0; i < tUV.Length; i++)
         {
             sb.AppendFormat("vt {0:f2} {1:f2}\n", tUV[i].x, tUV[i].y);
+            tryWrite(ref sb, ref writer, WRITE_THRESHOLD);
         }
         for (int i = 0; i < tPolys.Length; i += 3)
         {
@@ -228,7 +268,9 @@ public class ExportScene : ScriptableObject
             int y = tPolys[i + 1] + 1 + vertexOffset;
             int z = tPolys[i + 2] + 1 + vertexOffset;
             sb.AppendFormat("f {0} {1} {2}\n", x, y, z);
+            tryWrite(ref sb, ref writer, WRITE_THRESHOLD);
         }
+        tryWrite(ref sb, ref writer, 1);
         return tVertices.Length;
     }
 
