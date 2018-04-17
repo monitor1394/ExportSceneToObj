@@ -4,14 +4,15 @@ using System.IO;
 using System.Text;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
-/// 导处场景（包括GameObject和Terrian）到.obj文件，支持自定义裁剪区域导出和自动裁剪导出
+/// 导出场景（包括GameObject和Terrian）到.obj文件，支持自定义裁剪区域导出和自动裁剪导出
 /// 
 /// author by monitor1394@gmail.com
 /// 
 /// </summary>
-public class ExportScene : ScriptableObject
+public class ExportScene : EditorWindow
 {
     private const string CUT_LB_OBJ_PATH = "export/bound_lb";
     private const string CUT_RT_OBJ_PATH = "export/bound_rt";
@@ -25,7 +26,12 @@ public class ExportScene : ScriptableObject
     private static float cutMaxX = 0;
     private static float cutMinY = 0;
     private static float cutMaxY = 0;
-    private static int WRITE_THRESHOLD = 1024 * 1024;
+
+    private static long startTime = 0;
+    private static int totalCount = 0;
+    private static int count = 0;
+    private static int counter = 0;
+    private static int progressUpdateInterval = 10000;
 
     [MenuItem("ExportScene/ExportSceneToObj")]
     public static void Export()
@@ -41,17 +47,29 @@ public class ExportScene : ScriptableObject
 
     public static void ExportSceneToObj(bool autoCut)
     {
-        double t1 = getTickCount();
-        string dir = Application.dataPath + "/../obj/";
-        string path = dir + (autoCut ? "scene(autoCut).obj" : "scene.obj");
-        StreamWriter writer = GetMyStreamWriter( dir,  path, autoCut);
+        startTime = GetMsTime();
+
         int vertexOffset = 0;
-        StringBuilder sb = new StringBuilder();
+        string dir = Application.dataPath + "/";
+        string sceneName = SceneManager.GetActiveScene().name;
+        string defaultName = (autoCut ? sceneName + "(autoCut)" : sceneName);
+        string path = EditorUtility.SaveFilePanel("Export .obj file", dir, defaultName, "obj");
+
+        if (string.IsNullOrEmpty(path)) return;
+
+        StreamWriter writer = new StreamWriter(path);
         Terrain terrain = UnityEngine.Object.FindObjectOfType<Terrain>();
         GameObject[] objs = UnityEngine.Object.FindObjectsOfType<GameObject>();
+
         UpdateCutRect(autoCut);
+        counter = count = 0;
+        progressUpdateInterval = 10;
+        totalCount = objs.Length / progressUpdateInterval;
+
+        string title = "export GameObject to .obj ...";
         foreach (GameObject obj in objs)
         {
+            UpdateProgress(title);
             if (obj.transform.parent == null) // root obj
             {
                 MeshFilter[] mfs = obj.GetComponentsInChildren<MeshFilter>();
@@ -67,47 +85,31 @@ public class ExportScene : ScriptableObject
                     }
                     if (IsInCutRect(mf.gameObject))
                     {
-                        vertexOffset += ExportMeshToObj(sb, mf, vertexOffset);
+                        ExportMeshToObj(mf, ref writer, ref vertexOffset);
                     }
                 }
             }
-            tryWrite(ref sb, ref writer, WRITE_THRESHOLD);
         }
-        tryWrite(ref sb, ref writer, 1);
         if (terrain)
         {
-            vertexOffset += ExportTerrianToObj(terrain.terrainData, 
-                terrain.GetPosition(), ref writer, vertexOffset, autoCut);
+            ExportTerrianToObj(terrain.terrainData, terrain.GetPosition(),
+                ref writer, ref vertexOffset, autoCut);
         }
         writer.Close();
-        double t2 = getTickCount();
+        EditorUtility.ClearProgressBar();
+
+        long endTime = GetMsTime();
+        float time = (float)(endTime - startTime) / 1000;
         Debug.Log("ExportSceneToObj SUCCESS:" + path);
-        Debug.Log("ExportSceneToObj Cost Time:"+ ((float)(t2-t1) / 1000).ToString() + "s");
-    }
-    
-    private static StreamWriter GetMyStreamWriter(string dir, string path, bool autoCut)
-    {
-        if (!Directory.Exists(dir))
-        {
-            Directory.CreateDirectory(dir);
-        }
-        return new StreamWriter(path);
+        Debug.Log("ExportSceneToObj Cost Time:" + time + "s");
     }
 
-    private static void tryWrite(ref StringBuilder sb, ref StreamWriter writer, int threshold)
+    private static long GetMsTime()
     {
-        if (sb.Length >= threshold)
-        {
-            writer.Write(sb.ToString());
-            sb = new StringBuilder();
-        }
+        return System.DateTime.Now.Ticks / 10000;
+        //return (System.DateTime.Now.ToUniversalTime().Ticks - 621355968000000000) / 10000;
     }
 
-    private static double getTickCount()
-    {
-        return (System.DateTime.Now.ToUniversalTime().Ticks - 621355968000000000) / 10000;
-    }
-    
     private static void UpdateCutRect(bool autoCut)
     {
         cutMinX = cutMaxX = cutMinY = cutMaxY = 0;
@@ -140,33 +142,24 @@ public class ExportScene : ScriptableObject
             return false;
     }
 
-    private static void SaveObjToFile(string objInfo, string path)
-    {
-        using (StreamWriter writer = new StreamWriter(path))
-        {
-            writer.Write(objInfo);
-        }
-        Debug.Log("ExportSceneToObj SUCCESS:" + path);
-    }
-
-    private static int ExportMeshToObj(StringBuilder sb, MeshFilter mf, int vertexOffset)
+    private static void ExportMeshToObj(MeshFilter mf, ref StreamWriter writer, ref int vertexOffset)
     {
         Mesh mesh = mf.sharedMesh;
         Quaternion r = mf.transform.localRotation;
         Material[] mats = mf.GetComponent<Renderer>().sharedMaterials;
-
+        StringBuilder sb = new StringBuilder();
         foreach (Vector3 vertice in mesh.vertices)
         {
             Vector3 v = mf.transform.TransformPoint(vertice);
             UpdateAutoCutRect(v);
             sb.AppendFormat("v {0:f2} {1:f2} {2:f2}\n", -v.x, v.y, v.z);
         }
-        foreach(Vector3 nn in mesh.normals)
+        foreach (Vector3 nn in mesh.normals)
         {
             Vector3 v = r * nn;
             sb.AppendFormat("vn {0:f2} {1:f2} {2:f2}\n", -v.x, -v.y, v.z);
         }
-        foreach(Vector3 v in mesh.uv)
+        foreach (Vector3 v in mesh.uv)
         {
             sb.AppendFormat("vt {0:f2} {1:f2}\n", v.x, v.y);
         }
@@ -177,17 +170,18 @@ public class ExportScene : ScriptableObject
             int[] triangles = mesh.GetTriangles(i);
             for (int j = 0; j < triangles.Length; j += 3)
             {
-                sb.AppendFormat("f {1} {0} {2}\n", 
-                    triangles[j] + 1 + vertexOffset, 
-                    triangles[j + 1] + 1 + vertexOffset, 
+                sb.AppendFormat("f {1} {0} {2}\n",
+                    triangles[j] + 1 + vertexOffset,
+                    triangles[j + 1] + 1 + vertexOffset,
                     triangles[j + 2] + 1 + vertexOffset);
             }
         }
-        return mesh.vertices.Length;
+        vertexOffset += mesh.vertices.Length;
+        writer.Write(sb.ToString());
     }
 
-    private static int ExportTerrianToObj(TerrainData terrain, Vector3 terrainPos, 
-        ref StreamWriter writer, int vertexOffset, bool autoCut)
+    private static void ExportTerrianToObj(TerrainData terrain, Vector3 terrainPos,
+        ref StreamWriter writer, ref int vertexOffset, bool autoCut)
     {
         int tw = terrain.heightmapWidth;
         int th = terrain.heightmapHeight;
@@ -250,28 +244,35 @@ public class ExportScene : ScriptableObject
                 tPolys[index++] = (y * w) + x + 1;
             }
         }
-        
-        StringBuilder sb = new StringBuilder();
+        count = counter = 0;
+        progressUpdateInterval = 10000;
+        totalCount = (tVertices.Length + tUV.Length + tPolys.Length / 3) / progressUpdateInterval;
+        string title = "export Terrain to .obj ...";
         for (int i = 0; i < tVertices.Length; i++)
         {
+            UpdateProgress(title);
+            StringBuilder sb = new StringBuilder(22);
             sb.AppendFormat("v {0:f2} {1:f2} {2:f2}\n", tVertices[i].x, tVertices[i].y, tVertices[i].z);
-            tryWrite(ref sb, ref writer, WRITE_THRESHOLD);
+            writer.Write(sb.ToString());
         }
-        for(int i = 0; i < tUV.Length; i++)
+        for (int i = 0; i < tUV.Length; i++)
         {
+            UpdateProgress(title);
+            StringBuilder sb = new StringBuilder(20);
             sb.AppendFormat("vt {0:f2} {1:f2}\n", tUV[i].x, tUV[i].y);
-            tryWrite(ref sb, ref writer, WRITE_THRESHOLD);
+            writer.Write(sb.ToString());
         }
         for (int i = 0; i < tPolys.Length; i += 3)
         {
-            int x = tPolys[i] + 1 + vertexOffset;
+            UpdateProgress(title);
+            int x = tPolys[i] + 1 + vertexOffset; ;
             int y = tPolys[i + 1] + 1 + vertexOffset;
             int z = tPolys[i + 2] + 1 + vertexOffset;
+            StringBuilder sb = new StringBuilder(30);
             sb.AppendFormat("f {0} {1} {2}\n", x, y, z);
-            tryWrite(ref sb, ref writer, WRITE_THRESHOLD);
+            writer.Write(sb.ToString());
         }
-        tryWrite(ref sb, ref writer, 1);
-        return tVertices.Length;
+        vertexOffset += tVertices.Length;
     }
 
     private static Vector2 GetTerrainBoundPos(string path, TerrainData terrain, Vector3 terrainPos)
@@ -300,5 +301,18 @@ public class ExportScene : ScriptableObject
             return go.transform.position;
         }
         return Vector3.zero;
+    }
+
+    private static void UpdateProgress(string title)
+    {
+        if (counter++ == progressUpdateInterval)
+        {
+            counter = 0;
+            float process = Mathf.InverseLerp(0, totalCount, ++count);
+            long currTime = GetMsTime();
+            float sec = ((float)(currTime - startTime)) / 1000;
+            string text = string.Format("{0}/{1}({2:f2} sec.)", count, totalCount, sec);
+            EditorUtility.DisplayProgressBar(title, text, process);
+        }
     }
 }
