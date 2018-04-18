@@ -45,49 +45,62 @@ public class ExportScene : EditorWindow
         ExportSceneToObj(true);
     }
 
-    public static void ExportSceneToObj(bool autoCut)
+    [MenuItem("GameObject/ExportScene/ExportSelectedObj", priority = 44)]
+    public static void ExportObj()
     {
-        startTime = GetMsTime();
-
-        int vertexOffset = 0;
-        string dir = Application.dataPath + "/";
-        string sceneName = SceneManager.GetActiveScene().name;
-        string defaultName = (autoCut ? sceneName + "(autoCut)" : sceneName);
-        string path = EditorUtility.SaveFilePanel("Export .obj file", dir, defaultName, "obj");
-
+        GameObject selectObj = Selection.activeGameObject;
+        if (selectObj == null)
+        {
+            Debug.LogWarning("Select a GameObject");
+            return;
+        }
+        string path = GetSavePath(false, selectObj);
         if (string.IsNullOrEmpty(path)) return;
 
-        StreamWriter writer = new StreamWriter(path);
-        Terrain terrain = UnityEngine.Object.FindObjectOfType<Terrain>();
-        GameObject[] objs = UnityEngine.Object.FindObjectsOfType<GameObject>();
+        Terrain terrain = selectObj.GetComponent<Terrain>();
+        MeshFilter[] mfs = selectObj.GetComponentsInChildren<MeshFilter>();
+        SkinnedMeshRenderer[] smrs = selectObj.GetComponentsInChildren<SkinnedMeshRenderer>();
+        Debug.Log(mfs.Length + "," + smrs.Length);
+        ExportSceneToObj(path, terrain, mfs, smrs, false, false);
+    }
 
+    public static void ExportSceneToObj(bool autoCut)
+    {
+        string path = GetSavePath(autoCut, null);
+        if (string.IsNullOrEmpty(path)) return;
+        Terrain terrain = UnityEngine.Object.FindObjectOfType<Terrain>();
+        MeshFilter[] mfs = UnityEngine.Object.FindObjectsOfType<MeshFilter>();
+        SkinnedMeshRenderer[] smrs = UnityEngine.Object.FindObjectsOfType<SkinnedMeshRenderer>();
+        ExportSceneToObj(path, terrain, mfs, smrs, autoCut, true);
+    }
+
+    public static void ExportSceneToObj(string path, Terrain terrain, MeshFilter[] mfs,
+        SkinnedMeshRenderer[] smrs, bool autoCut, bool needCheckRect)
+    {
+        int vertexOffset = 0;
+        string title = "export GameObject to .obj ...";
+        StreamWriter writer = new StreamWriter(path);
+
+        startTime = GetMsTime();
         UpdateCutRect(autoCut);
         counter = count = 0;
-        progressUpdateInterval = 10;
-        totalCount = objs.Length / progressUpdateInterval;
-
-        string title = "export GameObject to .obj ...";
-        foreach (GameObject obj in objs)
+        progressUpdateInterval = 5;
+        totalCount = (mfs.Length + smrs.Length) / progressUpdateInterval;
+        foreach (var mf in mfs)
         {
             UpdateProgress(title);
-            if (obj.transform.parent == null) // root obj
+            if (mf.GetComponent<Renderer>() != null && 
+                (!needCheckRect || (needCheckRect && IsInCutRect(mf.gameObject))))
             {
-                MeshFilter[] mfs = obj.GetComponentsInChildren<MeshFilter>();
-                if (mfs == null || mfs.Length <= 0)
-                {
-                    continue;
-                }
-                foreach (var mf in mfs)
-                {
-                    if (mf.GetComponent<Renderer>() == null)
-                    {
-                        continue;
-                    }
-                    if (IsInCutRect(mf.gameObject))
-                    {
-                        ExportMeshToObj(mf, ref writer, ref vertexOffset);
-                    }
-                }
+                ExportMeshToObj(mf.gameObject, mf.sharedMesh, ref writer, ref vertexOffset);
+            }
+        }
+        foreach (var smr in smrs)
+        {
+            UpdateProgress(title);
+            if (!needCheckRect || (needCheckRect && IsInCutRect(smr.gameObject)))
+            {
+                ExportMeshToObj(smr.gameObject, smr.sharedMesh, ref writer, ref vertexOffset);
             }
         }
         if (terrain)
@@ -100,8 +113,25 @@ public class ExportScene : EditorWindow
 
         long endTime = GetMsTime();
         float time = (float)(endTime - startTime) / 1000;
-        Debug.Log("ExportSceneToObj SUCCESS:" + path);
-        Debug.Log("ExportSceneToObj Cost Time:" + time + "s");
+        Debug.Log("Export SUCCESS:" + path);
+        Debug.Log("Export Time:" + time + "s");
+    }
+
+    private static string GetSavePath(bool autoCut, GameObject selectObject)
+    {
+        string dataPath = Application.dataPath;
+        string dir = dataPath.Substring(0, dataPath.LastIndexOf("/"));
+        string sceneName = SceneManager.GetActiveScene().name;
+        string defaultName = "";
+        if (selectObject == null)
+        {
+            defaultName = (autoCut ? sceneName + "(autoCut)" : sceneName);
+        }
+        else
+        {
+            defaultName = (autoCut ? selectObject.name + "(autoCut)" : selectObject.name);
+        }
+        return EditorUtility.SaveFilePanel("Export .obj file", dir, defaultName, "obj");
     }
 
     private static long GetMsTime()
@@ -142,31 +172,27 @@ public class ExportScene : EditorWindow
             return false;
     }
 
-    private static void ExportMeshToObj(MeshFilter mf, ref StreamWriter writer, ref int vertexOffset)
+    private static void ExportMeshToObj(GameObject obj, Mesh mesh, ref StreamWriter writer, ref int vertexOffset)
     {
-        Mesh mesh = mf.sharedMesh;
-        Quaternion r = mf.transform.localRotation;
-        Material[] mats = mf.GetComponent<Renderer>().sharedMaterials;
+        Quaternion r = obj.transform.localRotation;
         StringBuilder sb = new StringBuilder();
         foreach (Vector3 vertice in mesh.vertices)
         {
-            Vector3 v = mf.transform.TransformPoint(vertice);
+            Vector3 v = obj.transform.TransformPoint(vertice);
             UpdateAutoCutRect(v);
-            sb.AppendFormat("v {0:f2} {1:f2} {2:f2}\n", -v.x, v.y, v.z);
+            sb.AppendFormat("v {0} {1} {2}\n", -v.x, v.y, v.z);
         }
         foreach (Vector3 nn in mesh.normals)
         {
             Vector3 v = r * nn;
-            sb.AppendFormat("vn {0:f2} {1:f2} {2:f2}\n", -v.x, -v.y, v.z);
+            sb.AppendFormat("vn {0} {1} {2}\n", -v.x, -v.y, v.z);
         }
         foreach (Vector3 v in mesh.uv)
         {
-            sb.AppendFormat("vt {0:f2} {1:f2}\n", v.x, v.y);
+            sb.AppendFormat("vt {0} {1}\n", v.x, v.y);
         }
         for (int i = 0; i < mesh.subMeshCount; i++)
         {
-            sb.AppendFormat("usemtl {0}\n", mats[i].name);
-            sb.AppendFormat("usemap {0}\n", mats[i].name);
             int[] triangles = mesh.GetTriangles(i);
             for (int j = 0; j < triangles.Length; j += 3)
             {
@@ -252,14 +278,14 @@ public class ExportScene : EditorWindow
         {
             UpdateProgress(title);
             StringBuilder sb = new StringBuilder(22);
-            sb.AppendFormat("v {0:f2} {1:f2} {2:f2}\n", tVertices[i].x, tVertices[i].y, tVertices[i].z);
+            sb.AppendFormat("v {0} {1} {2}\n", tVertices[i].x, tVertices[i].y, tVertices[i].z);
             writer.Write(sb.ToString());
         }
         for (int i = 0; i < tUV.Length; i++)
         {
             UpdateProgress(title);
             StringBuilder sb = new StringBuilder(20);
-            sb.AppendFormat("vt {0:f2} {1:f2}\n", tUV[i].x, tUV[i].y);
+            sb.AppendFormat("vt {0} {1}\n", tUV[i].x, tUV[i].y);
             writer.Write(sb.ToString());
         }
         for (int i = 0; i < tPolys.Length; i += 3)
