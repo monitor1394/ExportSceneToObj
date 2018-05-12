@@ -10,7 +10,7 @@
 * 支持导出`.fbx`模型
 
 ### 用法：
-* 将`ExportScene.cs`放到你的`Unity`项目的`Assets`/`Editor`目录下
+* 将`ExportScene.cs`脚本放到你项目的`Assets`/`Editor`目录下
 * 如果要自定义裁剪区域的话，场景中增加空`GameObject`用于表示裁剪区域（需要左下角和右上角两个空`GameObject`），并修改代码中`CUT_LB_OBJ_PATH`和`CUT_RT_OBJ_PATH`为对应的路径
 * 在`Unity`的菜单栏上有`ExportScene`菜单即可
 * 怎么单独导出`.fbx`模型？
@@ -20,3 +20,9 @@
 ### 其他：
 1. 目前判断物件是否在裁剪区域只是判断物件的坐标是否在区域内，还没有实现物件边界裁剪。
 2. 只有包含`MeshFilter`、`SkinnedMeshRenderer`、`Terrian`的物件才会被导出
+
+### 问题：
+1. 为什么将脚本放入项目中后菜单栏还是看不到`ExportScene`菜单项？  
+   答：脚本文件放到正确的目录，同时要检查是否有其他脚本有报错没有编译通过，有报错时先要处理报错。  
+2. 为什么导出的`obj`文件在`Maya`等`3D`软件中显示正常,但在`3d Max`显示异常？  
+   答：`3d Max`导入设置中勾选`Import as single mesh`选项。   
