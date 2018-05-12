@@ -34,17 +34,20 @@ public class ExportScene : EditorWindow
     private static int progressUpdateInterval = 10000;
 
     [MenuItem("ExportScene/ExportSceneToObj")]
+    [MenuItem("GameObject/ExportScene/ExportSceneToObj")]
     public static void Export()
     {
         ExportSceneToObj(false);
     }
 
     [MenuItem("ExportScene/ExportSceneToObj(AutoCut)")]
+    [MenuItem("GameObject/ExportScene/ExportSceneToObj(AutoCut)")]
     public static void ExportAutoCut()
     {
         ExportSceneToObj(true);
     }
 
+    [MenuItem("ExportScene/ExportSelectedObj")]
     [MenuItem("GameObject/ExportScene/ExportSelectedObj", priority = 44)]
     public static void ExportObj()
     {
@@ -115,6 +118,19 @@ public class ExportScene : EditorWindow
         float time = (float)(endTime - startTime) / 1000;
         Debug.Log("Export SUCCESS:" + path);
         Debug.Log("Export Time:" + time + "s");
+        OpenDir(path);
+    }
+
+    private static void OpenDir(string path)
+    {
+        DirectoryInfo dir = Directory.GetParent(path);
+        int index = path.LastIndexOf("/");
+        OpenCmd("explorer.exe", dir.FullName);
+    }
+
+    private static void OpenCmd(string cmd,string args)
+    {
+        System.Diagnostics.Process.Start(cmd,args);
     }
 
     private static string GetSavePath(bool autoCut, GameObject selectObject)
