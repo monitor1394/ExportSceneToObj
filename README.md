@@ -25,7 +25,9 @@
 1. 为什么将脚本放入项目中后菜单栏还是看不到`ExportScene`菜单项？  
    答：脚本文件放到正确的目录，同时要检查是否有其他脚本有报错没有编译通过，有报错时先要处理报错。  
 2. 为什么导出的`obj`文件在`Maya`等`3D`软件中显示正常,但在`3d Max`显示异常？  
-   答：`3d Max`导入设置中勾选`Import as single mesh`选项。   
+   答：`3d Max`导入设置中勾选`Import as single mesh`选项。  
+   
+### 觉得有用的朋友帮忙点个star吧
 
 ### 参考：
 1. [ExportOBJ](http://wiki.unity3d.com/index.php?title=ExportOBJ)
