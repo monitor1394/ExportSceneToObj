@@ -196,12 +196,12 @@ public class ExportScene : EditorWindow
         {
             Vector3 v = obj.transform.TransformPoint(vertice);
             UpdateAutoCutRect(v);
-            sb.AppendFormat("v {0} {1} {2}\n", -v.x, v.y, v.z);
+            sb.AppendFormat("v {0} {1} {2}\n", v.x, v.y, v.z);
         }
         foreach (Vector3 nn in mesh.normals)
         {
             Vector3 v = r * nn;
-            sb.AppendFormat("vn {0} {1} {2}\n", -v.x, -v.y, v.z);
+            sb.AppendFormat("vn {0} {1} {2}\n", v.x, v.y, v.z);
         }
         foreach (Vector3 v in mesh.uv)
         {
