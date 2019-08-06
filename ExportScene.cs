@@ -212,7 +212,7 @@ public class ExportScene : EditorWindow
             int[] triangles = mesh.GetTriangles(i);
             for (int j = 0; j < triangles.Length; j += 3)
             {
-                sb.AppendFormat("f {1} {0} {2}\n",
+                sb.AppendFormat("f {1}/{1}/{1} {0}/{0}/{0} {2}/{2}/{2}\n",
                     triangles[j] + 1 + vertexOffset,
                     triangles[j + 1] + 1 + vertexOffset,
                     triangles[j + 2] + 1 + vertexOffset);
