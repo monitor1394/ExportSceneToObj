@@ -1,17 +1,16 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿/******************************************/
+/*                                        */
+/*     Copyright (c) 2018 monitor1394     */
+/*     https://github.com/monitor1394     */
+/*                                        */
+/******************************************/
+
 using System.IO;
 using System.Text;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-/// <summary>
-/// 导出场景（包括GameObject和Terrian）到.obj文件，支持自定义裁剪区域导出和自动裁剪导出
-/// 
-/// author by monitor1394@gmail.com
-/// 
-/// </summary>
 public class ExportScene : EditorWindow
 {
     private const string CUT_LB_OBJ_PATH = "export/bound_lb";
@@ -92,7 +91,7 @@ public class ExportScene : EditorWindow
         foreach (var mf in mfs)
         {
             UpdateProgress(title);
-            if (mf.GetComponent<Renderer>() != null && 
+            if (mf.GetComponent<Renderer>() != null &&
                 (!needCheckRect || (needCheckRect && IsInCutRect(mf.gameObject))))
             {
                 ExportMeshToObj(mf.gameObject, mf.sharedMesh, ref writer, ref vertexOffset);
@@ -128,9 +127,9 @@ public class ExportScene : EditorWindow
         OpenCmd("explorer.exe", dir.FullName);
     }
 
-    private static void OpenCmd(string cmd,string args)
+    private static void OpenCmd(string cmd, string args)
     {
-        System.Diagnostics.Process.Start(cmd,args);
+        System.Diagnostics.Process.Start(cmd, args);
     }
 
     private static string GetSavePath(bool autoCut, GameObject selectObject)

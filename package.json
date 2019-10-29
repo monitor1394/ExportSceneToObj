@@ -1,0 +1,26 @@
+{
+    "name": "com.monitor1394.exportscenetoobj",
+    "displayName": "Export Scene To Obj",
+    "version": "1.0.0",
+    "unity": "2018.3",
+    "description": "Export scene (including objects and terrain ) or fbx to .obj file for Unity.",
+    "keywords": [
+      "unity",
+      "export",
+      "scene",
+      "terrain",
+      "obj",
+      "fbx"
+    ],
+    "category": "editor",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/monitor1394/ExportSceneToObj.git"
+    },
+    "author": "monitor1394",
+    "license": "MIT",
+    "bugs": {
+      "url": "https://github.com/monitor1394/ExportSceneToObj/issues"
+    },
+    "homepage": "https://github.com/monitor1394/ExportSceneToObj"
+  }
