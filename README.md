@@ -13,10 +13,10 @@
 
 ## 截图
 
-<img src="Documentation/screenshot/scene.png" width="1000" height="auto"/>
-<img src="Documentation/screenshot/export.png" width="1000" height="auto"/>
-<img src="Documentation/screenshot/part.png" width="1000" height="auto"/>
-<img src="Documentation/screenshot/select.png" width="1000" height="auto"/>
+<img src="Documentation/screenshot/scene.jpg" width="1024" height="auto"/>
+<img src="Documentation/screenshot/export.jpg" width="1024" height="auto"/>
+<img src="Documentation/screenshot/part.jpg" width="1024" height="auto"/>
+<img src="Documentation/screenshot/select.jpg" width="1024" height="auto"/>
 
 ## 用法
 
