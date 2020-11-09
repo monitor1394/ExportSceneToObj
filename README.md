@@ -1,7 +1,7 @@
 ﻿
 # ExportSceneToObj
 
-一款用于导出场景（包括`GameObject`和`Terrian`）或到`.fbx`模型`.obj`文件的`Unity`插件。
+一款用于导出场景（包括`GameObject`和`Terrian`）或`.fbx`模型到`.obj`文件的`Unity`插件。
 
 ## 功能
 
@@ -20,7 +20,7 @@
 
 ## 用法
 
-* 通过下载源码或`unitypackage`包导入到你的项目中（放在`Assets`目录下）。如果你是`2018.3`及以上版本，强烈建议通过`Package Manager`的`Git`来导入包（也可以下载后本地安装包）：
+* 通过下载源码或`unitypackage`包导入到你的项目中（放在`Assets`目录下）。如果你是`2018.3`及以上版本，可通过`Package Manager`的`Git`来导入包（也可以下载后本地安装包）：
 
   1. 打开`Packages`目录下的`manifest.json`文件，在`dependencies`下加入：
   ``` json
@@ -48,8 +48,6 @@
 
 2. 为什么导出的`obj`文件在`Maya`等`3D`软件中显示正常,但在`3d Max`显示异常？  
    答：`3d Max`导入设置中勾选`Import as single mesh`选项。  
-
-## 觉得有用的朋友帮忙点个star吧
 
 ## 参考
 
